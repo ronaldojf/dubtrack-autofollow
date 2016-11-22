@@ -8,7 +8,7 @@
 // ==UserScript==
 // @name         dubtrack-autofollow
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.0.1
 // @description  Automatically checks if there's users in the current room to follow.
 // @author       Ronaldo Fuzinato
 // @site         https://github.com/ronaldojf/dubtrack-autofollow/
@@ -55,7 +55,7 @@
       }
     };
 
-    setInterval(refreshFollows, 10 * 60 * 1000);
+    setInterval(refreshFollows, 20 * 60 * 1000);
     setTimeout(refreshFollows, 15 * 1000);
   });
 
