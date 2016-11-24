@@ -1,6 +1,6 @@
 ## dubtrack-autofollow
 
-A script for [dubtrack.fm](https://www.dubtrack.fm) to verify each 10 minutes if there's users, in the room you are in, you didn't followed yet and to follow them.
+A script for [dubtrack.fm](https://www.dubtrack.fm) to verify each 10 minutes if there's users, in the room you are in, you didn't follow yet and to follow them.
 
 ### Installation Instructions
 
