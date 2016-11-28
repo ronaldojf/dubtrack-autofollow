@@ -8,8 +8,8 @@
 // ==UserScript==
 // @name         dubtrack-autofollow
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
-// @description  Automatically checks if there's users in the current room to follow.
+// @version      1.1.0
+// @description  Automatically watch if there's users in the current room to follow.
 // @author       Ronaldo Fuzinato
 // @site         https://github.com/ronaldojf/dubtrack-autofollow/
 // @match        *://dubtrack.fm/*
@@ -22,41 +22,62 @@
   'use strict';
 
   $(function() {
-    var followUsersRecursively = function(idsCollection, currentIndex) {
+    var followUser = function(userId, callback) {
+      var followingUrl = Dubtrack.config.apiUrl + Dubtrack.config.urls.userFollowing.replace(':id', userId);
+      Dubtrack.helpers.sendRequest(followingUrl, {}, 'post', callback);
+    };
+
+    var followUsersRecursively = function(idsCollection, callback, currentIndex) {
       currentIndex = currentIndex || 0;
 
       if (idsCollection.length > 0 && currentIndex <= (idsCollection.length - 1)) {
-        var followingUrl = Dubtrack.config.apiUrl + Dubtrack.config.urls.userFollowing.replace(':id', idsCollection[currentIndex]);
-
-        Dubtrack.helpers.sendRequest(followingUrl, {}, 'post', function() {
-          followUsersRecursively(idsCollection, currentIndex + 1);
+        followUser(idsCollection[currentIndex], function() {
+          followUsersRecursively(idsCollection, callback, currentIndex + 1);
         });
+      } else {
+        callback();
       }
     };
 
-    var refreshFollows = function() {
+    var setup = function() {
       if (Dubtrack.session.id && ((Dubtrack.room || {}).users || {}).rt_users) {
         var followUrl = Dubtrack.config.apiUrl + Dubtrack.config.urls.userFollow.replace(':id', Dubtrack.session.id);
 
         Dubtrack.helpers.sendRequest(followUrl, {}, 'get', function(err, response) {
           var toFollow = [];
           var users = Dubtrack.room.users.rt_users;
-          var follows = response.data.map(function(follow) { return follow.following; });
+          var followings = response.data.map(function(follow) { return follow.following; });
 
           for (var i = 0; i < users.length; i++) {
-            if (follows.indexOf(users[i]) === -1) {
+            if (followings.indexOf(users[i]) === -1) {
               toFollow.push(users[i]);
             }
           }
 
-          console.log('dubtrack-autofollow: Going to follow ' + toFollow.length + ' users now! You already have ' + follows.length + ' follows.');
-          followUsersRecursively(toFollow);
+          console.log('dubtrack-autofollow: Going to follow ' + toFollow.length + ' users now! You already have ' + followings.length + ' followings.');
+          followUsersRecursively(toFollow, function() {
+            watchForNewFollowings(followings);
+          });
         });
+      } else {
+        console.error('dubtrack-autofollow: Setup failed! Make sure you are signed in and in a room.');
       }
     };
 
-    setInterval(refreshFollows, 20 * 60 * 1000);
-    setTimeout(refreshFollows, 15 * 1000);
+    var watchForNewFollowings = function(followings) {
+      Dubtrack.Events.bind('realtime:user-join', function(data) {
+        if (followings.indexOf(data.user._id) === -1) {
+          followUser(data.user._id, function(err) {
+            if (!err) {
+              followings.push(data.user._id);
+              console.log('dubtrack-autofollow: ' + data.user.username + ' has been followed. You have now ' + followings.length + ' followings.');
+            }
+          });
+        }
+      });
+    };
+
+    setTimeout(setup, 15 * 1000);
   });
 
 })($, console, Dubtrack);
